@@ -92,8 +92,8 @@ if check_range "${sec_crit}" 0:"${sec_warn}" ; then
 fi
 
 # get unixtime of last backup
-sec_last="$(borg list --format '{time}{NUL}' "${repo}" | xargs '-0' '-I&' 'date' '--date=&' '+%s' | sort | tail -n 1)"
-last="$(date --date="@${sec_last}")"
+last="$(borg list --format '{time}' --sort-by timestamp --last 1 ${repo})"
+sec_last=$(date --date="${last}" +%s)
 
 # interpret the amount of fails
 if [ "${sec_crit}" -gt "${sec_last}" ]; then
