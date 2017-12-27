@@ -108,7 +108,7 @@ if [ "${crit}" -le "${warn}" ]; then
 fi
 
 # get unixtime of last backup
-date_last_backup="$(borg list --format '{time}' --last 1 ${repo})"
+date_last_backup="$($COMMAND_BORG list --format '{time}' --last 1 ${repo})"
 
 if [ "x${date_last_backup}" = "x" ]; then
 	echo "BORG CRITICAL, no backup found in repository."
