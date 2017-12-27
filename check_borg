@@ -27,17 +27,17 @@ verbose(){ ([ "$verbose" -gt 0 ] && echo "$*") || return 0; }
 
 error(){   echo "$*" >&2; exit $STATE_UNKNOWN; }
 
-crit='7 days ago'
-warn='3 days ago'
+crit=73
+warn=25
 verbose=0
 repo=''
 
 usage(){
 	cat >&2 <<-FIN
-	usage: $PROGNAME -R REPO [-w DATE] [-c DATE] [ -h -v ]
+	usage: $PROGNAME -R REPO [-w HOURS] [-c HOURS] [ -h -v ]
 
-	REPO: borg repo-url
-	DATE: Any valid date for the date-command.
+	REPO:  borg repo-url
+	HOURS: max age in hours
 	      default for -w: "${warn}"
 	      default for -c: "${crit}"
 	FIN
@@ -72,6 +72,24 @@ while getopts ":vhR:a:c:w:" opt; do
 	esac
 done
 
+# turns a timestamp returned by borg's {time} format to unixtime
+# e.g.: "Wed, 2017-12-27 17:52:15" -> 1514393535
+# parsing with GNU date is different than with BSD date
+borg_time_to_unixtime() {
+	# FreeBSD's date has no --version flag, so checking via uname is easier and should be sufficient for this script
+	case $(uname) in
+		FreeBSD)
+			date -jf "%F %T" "$(echo ${1} | awk '{ print $2 " " $3 }')" +%s
+			;;
+		Linux)
+			date --date="${1}" +%s
+			;;
+		*)
+			# not yet implemented, but could easily be added. return 0, so state is always critical
+			echo 0
+			;;
+	esac
+}
 
 if [ -z "${COMMAND_BORG}" ]; then
 	error "No command 'borg' available."
@@ -82,29 +100,30 @@ if [ -z "${repo}" ]; then
 fi
 verbose "repo ${repo}"
 
-# convert values to seconds to enable comparison
-sec_warn="$(date --date="${warn}" '+%s')"
-sec_crit="$(date --date="${crit}" '+%s')"
-
 # check warning and critical values
-if check_range "${sec_crit}" 0:"${sec_warn}" ; then
-	error "Warning value has to be a more recent timepoint than critical."
+if [ "${crit}" -le "${warn}" ]; then
+	error "Warning value (${warn}h) has to be lower than critical (${crit}h)."
 fi
 
 # get unixtime of last backup
-last="$(borg list --format '{time}' --sort-by timestamp --last 1 ${repo})"
-sec_last=$(date --date="${last}" +%s)
+date_last_backup="$(borg list --format '{time}' --last 1 ${repo})"
+timestamp_last_backup=$(borg_time_to_unixtime "${date_last_backup}")
 
-# interpret the amount of fails
-if [ "${sec_crit}" -gt "${sec_last}" ]; then
+# calculate the minimum seconds for warning and critical for comparison
+now=$(date +%s)
+threshold_warn=$(expr ${now} - ${warn} \* 3600)
+threshold_crit=$(expr ${now} - ${crit} \* 3600)
+
+# compare the actual backup timestamp against the expected values
+if [ "${threshold_crit}" -gt "${timestamp_last_backup}" ]; then
 	state=$STATE_CRITICAL
-	msg="BORG CRITICAL, last backup made on ${last}"
-elif [ "${sec_warn}" -gt "${sec_last}" ]; then
+	msg="BORG CRITICAL, last backup made on ${date_last_backup}"
+elif [ "${threshold_warn}" -gt "${timestamp_last_backup}" ]; then
 	state=$STATE_WARNING
-	msg="BORG WARN, last backup made on ${last}"
+	msg="BORG WARN, last backup made on ${date_last_backup}"
 else
 	state=$STATE_OK
-	msg="BORG OK, last backup made on ${last}"
+	msg="BORG OK, last backup made on ${date_last_backup}"
 fi
 
 echo "$msg"
