@@ -4,11 +4,17 @@ Check borg repository for date of latest archive.
 
 Usable with nagios, icinga2 or any other nagios-fork.
 
+Fork from [bebehei/nagios-plugin-check_borg](https://github.com/bebehei/nagios-plugin-check_borg). Changes:
+
+- uses hours as threshold-values for critical and warning
+- works only with borg >= 1.1
+- works on FreeBSD and Linux
+
 # Usage
 
-    ./check_borg -R <borg-repo-url> [ -c <date> ] [ -w <date> ]
+    ./check_borg -R <borg-repo-url> [ -c hours ] [ -w hours ]
 
-`<date>` can be any valid format parsable by the date-command. So `last day` would be a valid date.
+Hours must be an integer.
 
 ## Passwords
 

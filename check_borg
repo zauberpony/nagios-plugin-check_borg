@@ -4,7 +4,7 @@ set -o nounset
 
 PROGNAME=$(basename "$0")
 PROGPATH=$(echo "$0" | sed -e 's,[\\/][^\\/][^\\/]*$,,')
-REVISION="0.1"
+REVISION="0.2"
 COMMAND_BORG="$(command -v borg)"
 
 # source a utils.sh from nagios-plugins
