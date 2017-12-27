@@ -109,6 +109,12 @@ fi
 
 # get unixtime of last backup
 date_last_backup="$(borg list --format '{time}' --last 1 ${repo})"
+
+if [ "x${date_last_backup}" = "x" ]; then
+	echo "BORG CRITICAL, no backup found in repository."
+	exit $STATE_CRITICAL
+fi
+
 timestamp_last_backup=$(borg_time_to_unixtime "${date_last_backup}")
 
 # calculate the minimum seconds for warning and critical for comparison
