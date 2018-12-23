@@ -108,7 +108,7 @@ if [ "${crit}" -le "${warn}" ]; then
 fi
 
 # get unixtime of last backup (or an error-message if that fails)
-if ! date_last_backup="$($COMMAND_BORG list --format '{time}' --last 1 ${repo} 2>&1)"; then
+if ! date_last_backup="$($COMMAND_BORG list --lock-wait 55 --format '{time}' --last 1 ${repo} 2>&1)"; then
 	case $date_last_backup in
 		# not getting the lock is a common error if a backup is currently in progress
 		"Failed to create/acquire the lock"*)
