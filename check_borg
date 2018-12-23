@@ -107,8 +107,17 @@ if [ "${crit}" -le "${warn}" ]; then
 	error "Warning value (${warn}h) has to be lower than critical (${crit}h)."
 fi
 
-# get unixtime of last backup
-date_last_backup="$($COMMAND_BORG list --format '{time}' --last 1 ${repo})"
+# get unixtime of last backup (or an error-message if that fails)
+if ! date_last_backup="$($COMMAND_BORG list --format '{time}' --last 1 ${repo} 2>&1)"; then
+	case $date_last_backup in
+		# not getting the lock is a common error if a backup is currently in progress
+		"Failed to create/acquire the lock"*)
+			error "BORG UNKNOWN, failed to acquire exclusive lock. Probably there's a backup in progress currently."
+			;;
+	esac
+
+	error "BORG UNKNOWN, borg list failed for unknown reason: \"${date_last_backup}\""
+fi
 
 if [ "x${date_last_backup}" = "x" ]; then
 	echo "BORG CRITICAL, no backup found in repository."
